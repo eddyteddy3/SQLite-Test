@@ -20,7 +20,8 @@ class ViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        statusTextField.isHidden = true
+        initDatabase()
     }
     
     func initDatabase() {
@@ -29,6 +30,7 @@ class ViewController: UIViewController {
         //appending the database file .db in document directory.
         databasePath = dirPath[0].appendingPathComponent("contacts.db").path
         
+        //if file not exists already
         if !fileMng.fileExists(atPath: databasePath) {
             //initialized the FMDB at the previous path
             let contactDB = FMDatabase(path: databasePath)
@@ -44,13 +46,49 @@ class ViewController: UIViewController {
             } else {
                 print("Error opening connection: \(contactDB.lastErrorMessage())")
             }
+        } else {
+            print("File already exits")
         }
     }
 
     @IBAction func saveRecord(_ sender: Any) {
+        let name = nameTextField.text
+        let address = addressTextField.text
+        let phone = phoneTextField.text
+        
+        //initializing the FMDatabase to fetch the results
+        let contactDB = FMDatabase(path: databasePath)
+        
+        //opening the database connection
+        if (contactDB.open()) {
+            //inserting into table
+            let insertSqlQuery = "insert into contact (Name, Address, Phone) values (\(name ?? ""), \(address ?? ""), \(phone ?? ""))"
+            
+            //executing the query
+            do {
+                try contactDB.executeUpdate(insertSqlQuery, values: nil)
+            } catch {
+                print("Insert record error: \(contactDB.lastErrorMessage())")
+                print(error.localizedDescription)
+            }
+            
+            statusTextField.isHidden = false
+            statusTextField.text = "Record Saved!"
+            statusTextField.textColor = .red
+            nameTextField.text = ""
+            addressTextField.text = ""
+            phoneTextField.text = ""
+        } else {
+            print("database connection error: \(contactDB.lastErrorMessage())")
+        }
+        
+        contactDB.close()
+        
     }
     
     @IBAction func fetchRecord(_ sender: Any) {
+        
+        
     }
 }
 
