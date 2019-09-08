@@ -21,6 +21,8 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         statusTextField.isHidden = true
+        statusTextField.textColor = .red
+        
         initDatabase()
     }
     
@@ -28,7 +30,7 @@ class ViewController: UIViewController {
         let dirPath = fileMng.urls(for: .documentDirectory, in: .userDomainMask)
         
         //appending the database file .db in document directory.
-        databasePath = dirPath[0].appendingPathComponent("contacts.db").path
+        databasePath = dirPath[0].appendingPathComponent("contactss.db").path
         
         //if file not exists already
         if !fileMng.fileExists(atPath: databasePath) {
@@ -37,7 +39,7 @@ class ViewController: UIViewController {
             
             //opening the FMdatabase connection
             if (contactDB.open()) {
-                let sql_statement = "create table if exits contact (id integer primary key autoincrement, Name text, Address text, Phone integer)"
+                let sql_statement = "create table if not exists contact (id integer primary key autoincrement, Name text, Address text, Phone integer)"
                 if !contactDB.executeStatements(sql_statement) {
                     print("Error Craeting table: \(contactDB.lastErrorMessage())")
                 }
@@ -62,7 +64,7 @@ class ViewController: UIViewController {
         //opening the database connection
         if (contactDB.open()) {
             //inserting into table
-            let insertSqlQuery = "insert into contact (Name, Address, Phone) values (\(name ?? ""), \(address ?? ""), \(phone ?? ""))"
+            let insertSqlQuery = "insert into contact (Name, Address, Phone) values ('\(name ?? "")', '\(address ?? "")', \(phone ?? ""))"
             
             //executing the query
             do {
@@ -74,21 +76,46 @@ class ViewController: UIViewController {
             
             statusTextField.isHidden = false
             statusTextField.text = "Record Saved!"
-            statusTextField.textColor = .red
             nameTextField.text = ""
             addressTextField.text = ""
             phoneTextField.text = ""
+            
         } else {
             print("database connection error: \(contactDB.lastErrorMessage())")
         }
         
         contactDB.close()
-        
     }
     
     @IBAction func fetchRecord(_ sender: Any) {
         
+        statusTextField.isHidden = false
+        let contactDB = FMDatabase(path: databasePath)
         
+        if (contactDB.open()) {
+            //user need to enter the name in order to fetch the rest of record
+            let sql_statement = "select address, phone from contact where name = '\(nameTextField.text ?? "")'"
+            
+            do {
+                let results: FMResultSet? = try contactDB.executeQuery(sql_statement, values: nil)
+                
+                if results?.next() == true {                    statusTextField.text = "Record Found!"
+                    addressTextField.text = results?.string(forColumn: "address")
+                    phoneTextField.text = results?.string(forColumn: "phone")
+                } else {
+                    statusTextField.text = "Record Not Found!"
+                    addressTextField.text = ""
+                    phoneTextField.text = ""
+                }
+            } catch {
+                print("Record Retrieving error: \(contactDB.lastErrorMessage())")
+                print(error.localizedDescription)
+            }
+        } else {
+            print("DB Connection error: \(contactDB.lastErrorMessage())")
+        }
+        
+        contactDB.close()
     }
 }
 
